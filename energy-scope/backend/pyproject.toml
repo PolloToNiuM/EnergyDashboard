@@ -1,0 +1,5 @@
+[project]
+name = "energy-scope-backend"
+version = "0.1.0"
+description = "Backend service for Energy Scope."
+requires-python = ">=3.11"
