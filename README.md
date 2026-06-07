@@ -22,7 +22,7 @@ EnergyScope a pour ambition de :
 
 - **Zone couverte :** France
 - **Granularité :** horaire
-- **Sources de données principales :** RTE, ODRÉ, Open-Meteo
+- **Sources de données principales :** RTE, Open-Meteo
 
 ## Fonctionnalités prévues
 
