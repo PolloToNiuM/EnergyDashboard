@@ -1,0 +1,21 @@
+{
+  "source_id": "rte",
+  "dataset": "actual_generation",
+  "extracted_at": "2026-06-07T09:59:46.723801+00:00",
+  "url": "https://digital.iservices.rte-france.com/open_api/actual_generation/v1/actual_generations_per_production_type?start_date=2026-06-03T23%3A00%3A00%2B02%3A00&end_date=2026-06-05T00%3A00%3A00%2B02%3A00",
+  "status_code": 200,
+  "headers": {
+    "date": "Sun, 07 Jun 2026 09:59:46 GMT",
+    "server": "Apache-Coyote/1.1",
+    "max-forwards": "20",
+    "via": "1.1 vespaprdif012vm (Gateway)",
+    "x-correlationid": "Id-1241256a4b840c02ac5a41be 0",
+    "cache-control": "private",
+    "expires": "Thu, 01 Jan 1970 01:00:00 GMT",
+    "content-type": "application/json;charset=utf-8",
+    "keep-alive": "timeout=5, max=299",
+    "connection": "Keep-Alive",
+    "transfer-encoding": "chunked"
+  },
+  "content_sha256": "333db25b5376146ef41703ba9cb2e9eca3de0a448524c91d1371a3c261e588b6"
+}

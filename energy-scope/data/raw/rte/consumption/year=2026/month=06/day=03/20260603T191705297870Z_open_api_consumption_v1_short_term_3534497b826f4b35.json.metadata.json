@@ -1,0 +1,21 @@
+{
+  "source_id": "rte",
+  "dataset": "consumption",
+  "extracted_at": "2026-06-03T19:17:05.297870+00:00",
+  "url": "https://digital.iservices.rte-france.com/open_api/consumption/v1/short_term?start_date=2026-06-01T00%3A00%3A00%2B02%3A00&end_date=2026-06-02T00%3A00%3A00%2B02%3A00",
+  "status_code": 200,
+  "headers": {
+    "date": "Wed, 03 Jun 2026 19:17:05 GMT",
+    "server": "Apache-Coyote/1.1",
+    "max-forwards": "20",
+    "via": "1.1 vespaprdif012vm (Gateway)",
+    "x-correlationid": "Id-b17d206a94b2765e7e8dd356 0",
+    "cache-control": "private",
+    "expires": "Thu, 01 Jan 1970 01:00:00 GMT",
+    "content-type": "application/json;charset=utf-8",
+    "keep-alive": "timeout=5, max=299",
+    "connection": "Keep-Alive",
+    "transfer-encoding": "chunked"
+  },
+  "content_sha256": "3534497b826f4b358b32734d6af8c49246f036e0dab2094fc5bcd68e6c660552"
+}

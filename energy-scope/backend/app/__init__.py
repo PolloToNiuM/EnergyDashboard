@@ -1,0 +1,1 @@
+"""Energy Scope backend package."""

@@ -3,3 +3,11 @@ name = "energy-scope-ingestion"
 version = "0.1.0"
 description = "Ingestion pipelines for Energy Scope."
 requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.0,<1.0.0",
+    "pandas>=2.2.0,<4.0.0",
+    "pyarrow>=16.0.0,<25.0.0",
+    "psycopg[binary]>=3.2.0,<4.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    "sqlalchemy>=2.0.0,<3.0.0",
+]

@@ -219,3 +219,18 @@ __marimo__/
 
 # DS Store
 .DS_Store
+
+# Data
+data/raw/
+data/processed/
+data/curated/
+
+# Database
+*.db
+*.sqlite
+
+node_modules/
+coverage/
+
+.vite
+DONTREAD.md
