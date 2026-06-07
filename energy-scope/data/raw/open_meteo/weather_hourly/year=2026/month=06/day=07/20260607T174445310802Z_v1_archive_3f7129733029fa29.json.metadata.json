@@ -1,0 +1,15 @@
+{
+  "source_id": "open_meteo",
+  "dataset": "weather_hourly",
+  "extracted_at": "2026-06-07T17:44:45.310802+00:00",
+  "url": "https://archive-api.open-meteo.com/v1/archive?latitude=43.2965&longitude=5.3698&start_date=2026-06-07&end_date=2026-06-07&hourly=temperature_2m&timezone=Europe%2FParis",
+  "status_code": 200,
+  "headers": {
+    "date": "Sun, 07 Jun 2026 17:44:45 GMT",
+    "content-type": "application/json; charset=utf-8",
+    "transfer-encoding": "chunked",
+    "connection": "keep-alive",
+    "content-encoding": "deflate"
+  },
+  "content_sha256": "3f7129733029fa29d8f431f77d546ac31c8ef757d8bbd68b256af307a20b5daf"
+}

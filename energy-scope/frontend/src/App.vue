@@ -2,17 +2,21 @@
 import { computed, ref } from "vue";
 import DashboardView from "./views/DashboardView.vue";
 import ConsumptionView from "./views/ConsumptionView.vue";
+import CorrelationView from "./views/CorrelationView.vue";
 
 const activeView = ref("production");
 
 const tabs = [
   { id: "production", label: "Production" },
   { id: "consumption", label: "Consommation" },
+  { id: "correlation", label: "Analyses" },
 ];
 
-const currentView = computed(() =>
-  activeView.value === "consumption" ? ConsumptionView : DashboardView,
-);
+const currentView = computed(() => {
+  if (activeView.value === "consumption") return ConsumptionView;
+  if (activeView.value === "correlation") return CorrelationView;
+  return DashboardView;
+});
 </script>
 
 <template>

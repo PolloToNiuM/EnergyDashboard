@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -27,6 +28,9 @@ from app.db.base import Base
 from app.models.energy_measurement import EnergyMeasurement
 
 
+logger = logging.getLogger(__name__)
+
+
 class PostgresLoaderError(RuntimeError):
     """Raised when data cannot be inserted into PostgreSQL."""
 
@@ -47,8 +51,10 @@ def create_postgres_engine(database_url: str | None = None) -> Engine:
 def init_postgres_schema(engine: Engine | None = None) -> None:
     """Create SQLAlchemy tables used by ingestion."""
     engine = engine or create_postgres_engine()
+    logger.info("postgres_schema_initializing")
     Base.metadata.create_all(bind=engine)
     _sync_energy_measurements_schema(engine)
+    logger.info("postgres_schema_initialized")
 
 
 def insert_energy_measurements(
@@ -59,6 +65,7 @@ def insert_energy_measurements(
 ) -> int:
     """Insert transformed energy measurements and skip existing duplicates."""
     if df.empty:
+        logger.error("postgres_insert_failed reason=empty_dataframe")
         raise PostgresLoaderError("Refusing to insert an empty dataframe.")
 
     engine = engine or create_postgres_engine()
@@ -67,6 +74,7 @@ def insert_energy_measurements(
 
     records = _prepare_energy_measurement_records(df)
     if not records:
+        logger.info("postgres_insert_skipped reason=no_records")
         return 0
 
     statement = insert(EnergyMeasurement.__table__).values(records)
@@ -84,7 +92,14 @@ def insert_energy_measurements(
     with engine.begin() as connection:
         result = connection.execute(statement)
 
-    return len(result.fetchall())
+    inserted_count = len(result.fetchall())
+    logger.info(
+        "postgres_measurements_inserted attempted_count=%s inserted_count=%s skipped_count=%s",
+        len(records),
+        inserted_count,
+        len(records) - inserted_count,
+    )
+    return inserted_count
 
 
 def _prepare_energy_measurement_records(df: pd.DataFrame) -> list[dict[str, Any]]:

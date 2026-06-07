@@ -45,3 +45,17 @@ export async function syncConsumption(date) {
 
   return response.json();
 }
+
+export async function syncWeather(date) {
+  const searchParams = new URLSearchParams({ date });
+  const response = await fetch(
+    `${API_BASE_URL}/measurements/sync/weather?${searchParams}`,
+    { method: "POST" },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to sync weather: ${response.status}`);
+  }
+
+  return response.json();
+}

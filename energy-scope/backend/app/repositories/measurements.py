@@ -1,5 +1,6 @@
 """Repository for energy measurements."""
 
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +10,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.models.energy_measurement import EnergyMeasurement
+
+
+logger = logging.getLogger(__name__)
 
 
 class MeasurementRepository:
@@ -42,7 +46,15 @@ class MeasurementRepository:
             end_date=end_date,
         )
         query = query.order_by(EnergyMeasurement.timestamp).offset(offset).limit(limit)
-        return list(self._db.scalars(query).all())
+        measurements = list(self._db.scalars(query).all())
+        logger.debug(
+            "measurements_selected metric=%s count=%s limit=%s offset=%s",
+            metric,
+            len(measurements),
+            limit,
+            offset,
+        )
+        return measurements
 
     def list_production_types(self, *, metric: str, source: str | None, zone: str | None) -> list[str]:
         query = select(distinct(EnergyMeasurement.production_type)).where(
@@ -126,6 +138,7 @@ class MeasurementRepository:
         """Insert measurements and ignore rows already present."""
         records = self._prepare_records(df)
         if not records:
+            logger.info("measurements_insert_skipped reason=no_records")
             return 0
 
         statement = insert(EnergyMeasurement.__table__).values(records)
@@ -142,7 +155,14 @@ class MeasurementRepository:
 
         result = self._db.execute(statement)
         self._db.commit()
-        return len(result.fetchall())
+        inserted_count = len(result.fetchall())
+        logger.info(
+            "measurements_inserted attempted_count=%s inserted_count=%s skipped_count=%s",
+            len(records),
+            inserted_count,
+            len(records) - inserted_count,
+        )
+        return inserted_count
 
     @staticmethod
     def _apply_filters(
