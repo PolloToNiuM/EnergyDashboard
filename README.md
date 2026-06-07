@@ -162,7 +162,7 @@ L’architecture actuellement visée est la suivante :
 ```text
                 ┌──────────────────────────┐
                 │       Sources API         │
-                │ RTE / ODRÉ / météo / ... │
+                │ RTE / météo / ... │
                 └─────────────┬────────────┘
                               │
                               ▼
