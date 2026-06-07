@@ -1,250 +1,290 @@
 # EnergyScope
 
-EnergyScope est un projet de visualisation de données consacré au système électrique français. Son objectif est de collecter, structurer et analyser des données énergétiques et météorologiques afin de proposer des tableaux de bord clairs, des comparaisons pertinentes et, à terme, des fonctionnalités simples de prévision.
+EnergyScope est une application de data engineering et de visualisation consacree au systeme electrique francais. Elle collecte des donnees RTE et Open-Meteo, les sauvegarde en brut, les transforme, les insere dans PostgreSQL, puis les expose dans une interface Vue.js.
 
-Ce dépôt est actuellement en phase de cadrage et de conception. Il documente la vision du produit, l’architecture cible et la feuille de route des premières versions.
+L'objectif est de suivre la production, la consommation, la meteo, les correlations entre energie et conditions meteorologiques, ainsi que la qualite des donnees ingerees.
 
-## Image d'avancement
+## Apercu
 
-![Image d'un Energy Dashboard](./assets/ScreehShot_Dashboard.png)
+![Dashboard EnergyScope](./assets/Screenshot_landing_screen.png)
 
-## Objectifs
+## Fonctionnalites
 
-EnergyScope a pour ambition de :
+- Production electrique par filiere via RTE.
+- Consommation electrique court terme via RTE.
+- Donnees meteo horaires via Open-Meteo, moyennees sur plusieurs villes francaises.
+- Comparaisons visuelles : consommation vs temperature, solaire vs rayonnement, eolien vs vent.
+- Vue qualite des donnees : valeurs nulles, valeurs negatives, doublons.
+- Backend FastAPI avec endpoints de lecture, synchronisation et controle qualite.
+- Stockage PostgreSQL, raw JSON et Parquet.
 
-- suivre la consommation électrique en France ;
-- analyser la production par filière ;
-- mettre en relation la production renouvelable et les conditions météorologiques ;
-- comparer le comportement du système électrique selon les jours et les périodes ;
-- introduire progressivement des fonctions de prévision et de suivi de la qualité des données.
-
-## Périmètre
-
-- **Zone couverte :** France
-- **Granularité :** horaire
-- **Sources de données principales :** RTE, Open-Meteo
-
-## Fonctionnalités prévues
-
-Le produit s’articule autour de plusieurs modules de visualisation.
-
-### 1. Dashboard national
-
-Offrir une vision synthétique du système électrique français sur une journée ou une période donnée.
-
-**Indicateurs principaux**
-
-- consommation totale ;
-- production totale ;
-- production nucléaire ;
-- production solaire ;
-- production éolienne ;
-- production hydraulique ;
-- température moyenne ;
-- pic de consommation et heure du pic.
-
-**Visualisations envisagées**
-
-- courbes de consommation par jour, semaine, mois et année ;
-- aire empilée de la production par filière ;
-- indicateurs clés de la journée ;
-- synthèse régionale si les données sont disponibles.
-
-### 2. Production solaire et météo
-
-Analyser la relation entre la production solaire et les conditions météorologiques.
-
-**Données exploitées**
-
-- production solaire ;
-- température ;
-- couverture nuageuse ;
-- rayonnement solaire ;
-- heure ;
-- saison.
-
-**Visualisations envisagées**
-
-- courbe de production solaire ;
-- courbe de rayonnement solaire ;
-- nuage de points rayonnement / production ;
-- heatmap heure / jour.
-
-### 3. Consommation et température
-
-Étudier l’influence de la température sur la demande électrique.
-
-**Fonctionnalités prévues**
-
-- comparer consommation et température sur une même période ;
-- détecter les pics liés au froid ou à la chaleur ;
-- comparer les comportements hiver / été ;
-- calculer des indicateurs de corrélation simples.
-
-### 4. Mix électrique
-
-Visualiser la part de chaque filière dans le mix électrique.
-
-**Filières suivies**
-
-- nucléaire ;
-- solaire ;
-- éolien ;
-- hydraulique ;
-- gaz ;
-- charbon ;
-- bioénergies ;
-- import / export si disponible.
-
-**Visualisations envisagées**
-
-- aire empilée du mix électrique ;
-- répartition journalière par filière ;
-- histogrammes par source ;
-- évolution hebdomadaire.
-
-### 5. Comparaison de journées
-
-Permettre de comparer deux dates distinctes et de mettre en évidence les écarts sur :
-
-- la consommation ;
-- la production solaire ;
-- la température ;
-- le mix électrique.
-
-### 6. Prévision simple
-
-Introduire des modèles d’estimation légers avant d’éventuelles approches de machine learning plus avancées.
-
-**Premières approches envisagées**
-
-- moyenne des jours similaires ;
-- régression linéaire simple ;
-- modèle basé sur la température, l’heure et le jour de la semaine.
-
-**Évolutions possibles**
-
-- Random Forest ;
-- XGBoost ;
-- Prophet ;
-- SARIMA ;
-- LightGBM.
-
-### 7. Qualité des données
-
-Suivre la fiabilité et la complétude des jeux de données ingérés.
-
-**Indicateurs prévus**
-
-- dernière ingestion réussie ;
-- nombre de lignes récupérées ;
-- nombre de lignes rejetées ;
-- pourcentage de valeurs manquantes ;
-- doublons détectés ;
-- sources indisponibles ;
-- périodes manquantes.
-
-### 8. Monitoring des pipelines
-
-Proposer une vue technique interne pour suivre l’exécution des traitements.
-
-**Exemples d’informations suivies**
-
-- statut des jobs ;
-- durée d’exécution ;
-- nombre de tentatives ;
-- dernier message d’erreur.
-
-## Architecture cible
-
-L’architecture actuellement visée est la suivante :
+## Architecture
 
 ```text
-                ┌──────────────────────────┐
-                │       Sources API         │
-                │ RTE / météo / ... │
-                └─────────────┬────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Ingestion Python │
-                    │ httpx + Pydantic │
-                    └────────┬────────┘
-                             │
-               ┌─────────────┴─────────────┐
-               ▼                           ▼
-      ┌─────────────────┐         ┌──────────────────┐
-      │ Données brutes   │         │ Logs d’ingestion  │
-      │ JSON / CSV       │         │ statuts, erreurs  │
-      └────────┬────────┘         └──────────────────┘
-               │
-               ▼
-       ┌──────────────────┐
-       │ Transformation    │
-       │ pandas            │
-       └────────┬─────────┘
-                │
-        ┌───────┴────────┐
-        ▼                ▼
-┌──────────────┐  ┌────────────────┐
-│ Parquet       │  │ PostgreSQL      │
-│ analytique    │  │ application     │
-└──────┬────────┘  └───────┬────────┘
-       │                   │
-       ▼                   ▼
-┌──────────────┐   ┌────────────────┐
-│ DuckDB        │   │ FastAPI         │
-│ requêtes SQL  │   │ API backend     │
-└──────────────┘   └───────┬────────┘
-                           │
-                           ▼
-                  ┌────────────────┐
-                  │ Vue.js          │
-                  │ ECharts         │
-                  └────────────────┘
+Sources API
+  RTE / Open-Meteo
+      |
+      v
+Ingestion Python
+  clients httpx, retries, logs
+      |
+      +--> data/raw/<source>/<dataset>/...
+      |
+      v
+Transforms pandas
+  normalisation timestamps, unites, colonnes
+      |
+      +--> data/processed/<dataset>/... parquet
+      |
+      v
+PostgreSQL
+  table energy_measurements
+      |
+      v
+FastAPI
+  /health, /measurements, /measurements/sync, /measurements/quality
+      |
+      v
+Frontend Vue + ECharts
+  production, consommation, analyses, qualite
 ```
 
-## Orientation technique
+## Stack technique
 
-La pile technique envisagée à ce stade est la suivante :
+- Backend : FastAPI, SQLAlchemy, Uvicorn.
+- Ingestion : Python, httpx, pandas.
+- Base applicative : PostgreSQL.
+- Stockage fichiers : JSON brut et Parquet.
+- Frontend : Vue.js, ECharts, Vite.
+- Qualite et tests : pytest, controles pandas, endpoint qualite.
+- Infrastructure : Docker Compose.
 
-- **Ingestion :** Python, `httpx`, `pydantic`
-- **Transformation des données :** `pandas`
-- **Stockage analytique :** Parquet, DuckDB
-- **Base applicative :** PostgreSQL
-- **Backend :** FastAPI, SQLAlchemy, Alembic, Uvicorn
-- **Frontend :** Vue.js, ECharts
-- **Infrastructure :** Docker Compose
-- **Fiabilité et qualité :** `pytest`, validation de données, planification des tâches, observabilité
+## Lancement Docker
 
-## Feuille de route
+Depuis un clone frais :
 
-### MVP
+```bash
+cd energy-scope
+cp .env.example .env
+docker compose up --build
+```
 
-Le premier jalon se concentre sur :
+Pour utiliser les synchronisations RTE, renseigner `RTE_BASIC_AUTH` dans `energy-scope/.env`. Sans cette variable, l'application demarre, mais les appels RTE production/consommation echoueront.
 
-- la consommation ;
-- la production par filière ;
-- l’intégration des données météo.
+Services exposes :
 
-### Version 2
+- Frontend : http://localhost:5173
+- Backend : http://localhost:8000
+- Healthcheck : http://localhost:8000/health
+- PostgreSQL : `localhost:5432`
 
-Le second jalon étendra le projet avec :
+La base PostgreSQL est initialisee automatiquement au demarrage du backend. Les donnees PostgreSQL sont conservees dans le volume Docker `postgres_data`.
 
-- la prévision simple ;
-- les indicateurs de qualité des données ;
-- la comparaison de journées.
+Commandes utiles :
 
-## État du dépôt
+```bash
+docker compose up --build
+docker compose down
+docker compose down -v
+```
 
-Ce dépôt constitue aujourd’hui une base de travail pour le projet. Les prochaines étapes prévues sont :
+`docker compose down -v` supprime aussi le volume PostgreSQL local.
 
-1. définir la structure initiale du projet ;
-2. implémenter les premiers pipelines d’ingestion ;
-3. construire les premiers jeux de données analytiques ;
-4. exposer une API backend ;
-5. livrer les premières vues du dashboard.
+## Lancement local
 
-## Licence
+Depuis `energy-scope/` :
 
-Aucune licence n’est définie pour le moment.
+```bash
+cp .env.example .env
+make backend-run
+make frontend-run
+```
+
+Le backend local ecoute sur http://127.0.0.1:8000 et le frontend sur http://127.0.0.1:5173.
+
+## Variables d'environnement
+
+Le fichier `energy-scope/.env.example` documente les variables principales :
+
+- `RTE_BASIC_AUTH` : credential RTE OAuth Basic.
+- `DATABASE_URL` : URL PostgreSQL.
+- `WEATHER_LOCATIONS` : villes utilisees pour approximer une moyenne France.
+- `WEATHER_HOURLY_VARIABLES` : variables Open-Meteo recuperees.
+- `LOG_LEVEL` et niveaux de logs techniques.
+
+## Ingestion
+
+Les jobs d'ingestion se trouvent dans `energy-scope/ingestion/energy_ingestion/jobs/`.
+
+Ingestion meteo Open-Meteo :
+
+```bash
+cd energy-scope
+python ingestion/energy_ingestion/jobs/ingest_weather.py --date 2026-06-06
+```
+
+Test client RTE et sauvegarde raw :
+
+```bash
+cd energy-scope
+python ingestion/energy_ingestion/jobs/test_rte_raw.py
+```
+
+Chargement production RTE transformee vers PostgreSQL :
+
+```bash
+cd energy-scope
+python ingestion/energy_ingestion/jobs/load_actual_generation_to_postgres.py
+```
+
+L'interface frontend peut aussi declencher des synchronisations via les endpoints `/measurements/sync/...`.
+
+## API
+
+Base URL locale : `http://localhost:8000`
+
+### Healthcheck
+
+```http
+GET /health
+```
+
+Reponse :
+
+```json
+{"status": "ok"}
+```
+
+### Lire les mesures
+
+```http
+GET /measurements
+```
+
+Parametres principaux :
+
+- `metric`
+- `source`
+- `zone`
+- `measurement_type`
+- `production_type`
+- `start_date`
+- `end_date`
+- `limit`
+- `offset`
+
+Exemple :
+
+```bash
+curl "http://localhost:8000/measurements?metric=consumption_short_term&limit=10"
+```
+
+### Synchroniser une date
+
+```http
+POST /measurements/sync/actual-generation?date=2026-06-06
+POST /measurements/sync/consumption?date=2026-06-06
+POST /measurements/sync/weather?date=2026-06-06
+```
+
+Les dates futures sont refusees.
+
+### Qualite des donnees
+
+```http
+GET /measurements/quality?dataset=production
+GET /measurements/quality?dataset=consumption
+GET /measurements/quality?dataset=weather
+```
+
+Regles controlees :
+
+- `timestamp` non null
+- `value` non null
+- `value >= 0`
+- `source` non null
+- `metric` non null
+- pas de doublons sur la cle naturelle
+
+## Modele de donnees
+
+La table applicative principale est `energy_measurements`.
+
+Colonnes principales :
+
+- `id` : identifiant technique.
+- `timestamp` : debut de la mesure.
+- `end_date` : fin de la mesure si fournie.
+- `updated_date` : date de mise a jour source si fournie.
+- `source` : `RTE`, `Open-Meteo`, etc.
+- `metric` : famille de mesure, par exemple `consumption_short_term`, `actual_generation_per_production_type`, `weather_hourly`.
+- `measurement_type` : type de mesure, par exemple `REALISED`, `temperature_2m`, `wind_speed_100m`.
+- `production_type` : filiere de production, par exemple `NUCLEAR`, `SOLAR`, `WIND_ONSHORE`.
+- `value` : valeur numerique.
+- `unit` : unite, par exemple `MW`, `C`, `W/m2`, `km/h`.
+- `zone` : zone geographique, aujourd'hui principalement `France`.
+- `granularity` : granularite temporelle.
+- `created_at` : date d'insertion.
+
+Contrainte d'unicite :
+
+```text
+timestamp + source + metric + measurement_type + production_type + zone
+```
+
+Cette cle evite les doublons lors des insertions PostgreSQL.
+
+## Structure du projet
+
+```text
+energy-scope/
+  backend/       FastAPI, modeles SQLAlchemy, routes, services, repositories
+  frontend/      Vue.js, vues, composants charts, client API
+  ingestion/     clients API, transforms, loaders, jobs, checks qualite
+  data/          raw JSON et processed Parquet locaux
+  docs/          documentation source
+  tests/         tests pytest
+  docker-compose.yml
+```
+
+## Tests
+
+Depuis `energy-scope/` :
+
+```bash
+./backend/.venv/bin/python -m pytest tests -q
+npm --prefix frontend run build
+```
+
+## Captures d'ecrans
+
+Capture deja presente :
+
+- Vue production : 
+
+![Dashboard Production](./assets/ScreehShot_Dashboard_production.png)
+
+- Vue Consommation : courbe de consommation
+
+![Dashboard Consumption](./assets/ScreehShot_Dashboard_consumption.png)
+
+- Vue Analyses : comparaison `Consommation vs temperature`.
+
+![Dashboard Temperature vs Consumption Comparison](./assets/ScreehShot_Dashboard_temp_comp.png)
+
+- Vue Analyses : comparaison `Solaire vs rayonnement`.
+
+![Dashboard Solar vs Ray Comparison](./assets/ScreehShot_Dashboard_sun_comp.png)
+
+- Vue Analyses : comparaison `Eolien vs Vent`.
+
+![Dashboard Wind vs turbine](./assets/ScreehShot_Dashboard_wind_comp.png)
+
+- Vue Qualite : controles qualite avec score et checks.
+
+![Dashboard Data Quality](./assets/ScreehShot_Dashboard_quality.png)
+
+- Optionnel : Swagger FastAPI sur `http://localhost:8000/docs`.
+
+![Swagger FastAPI](./assets/ScreenShot_Swagger.png)
+
