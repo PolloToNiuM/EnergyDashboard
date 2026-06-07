@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 WORKDIR /app
+ENV PYTHONPATH=/app/ingestion:/app
 
 COPY backend/app ./app
 COPY backend/pyproject.toml .
