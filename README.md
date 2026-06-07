@@ -284,7 +284,7 @@ Capture deja presente :
 
 ![Dashboard Data Quality](./assets/ScreehShot_Dashboard_quality.png)
 
-- Optionnel : Swagger FastAPI sur `http://localhost:8000/docs`.
+- Swagger FastAPI sur `http://localhost:8000/docs`.
 
 ![Swagger FastAPI](./assets/ScreenShot_Swagger.png)
 
