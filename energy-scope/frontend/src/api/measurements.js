@@ -59,3 +59,14 @@ export async function syncWeather(date) {
 
   return response.json();
 }
+
+export async function fetchDataQuality(dataset) {
+  const searchParams = new URLSearchParams({ dataset });
+  const response = await fetch(`${API_BASE_URL}/measurements/quality?${searchParams}`);
+
+  if (!response.ok) {
+    throw new Error(`Unable to fetch data quality: ${response.status}`);
+  }
+
+  return response.json();
+}

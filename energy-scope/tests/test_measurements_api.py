@@ -38,6 +38,23 @@ class FakeMeasurementService:
             )
         ]
 
+    def data_quality_summary(self, dataset):
+        return {
+            "dataset": dataset,
+            "metric": "consumption_short_term",
+            "total_rows": 2,
+            "passed": True,
+            "score": 100.0,
+            "checks": [
+                {
+                    "name": "timestamp_not_null",
+                    "label": "Timestamp non null",
+                    "invalid_count": 0,
+                    "passed": True,
+                }
+            ],
+        }
+
 
 def override_get_db():
     yield object()
@@ -63,3 +80,25 @@ def test_measurements_endpoint_returns_200(monkeypatch) -> None:
     assert response.headers["x-request-id"]
     assert response.json()[0]["metric"] == "consumption_short_term"
     assert response.json()[0]["measurement_type"] == "REALISED"
+
+
+def test_measurements_quality_endpoint_returns_200(monkeypatch) -> None:
+    monkeypatch.setattr(
+        measurements_routes,
+        "MeasurementService",
+        FakeMeasurementService,
+    )
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        response = TestClient(app).get(
+            "/measurements/quality",
+            params={"dataset": "consumption"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"]
+    assert response.json()["dataset"] == "consumption"
+    assert response.json()["passed"] is True

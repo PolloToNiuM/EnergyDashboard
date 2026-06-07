@@ -32,3 +32,23 @@ class MeasurementSyncResult(BaseModel):
     dataset: str
     date: str
     inserted_count: int
+
+
+class DataQualityCheckRead(BaseModel):
+    """Serialized result for one data quality rule."""
+
+    name: str
+    label: str
+    invalid_count: int
+    passed: bool
+
+
+class DataQualitySummaryRead(BaseModel):
+    """Serialized data quality summary for a dataset."""
+
+    dataset: str
+    metric: str
+    total_rows: int
+    passed: bool
+    score: float
+    checks: list[DataQualityCheckRead]

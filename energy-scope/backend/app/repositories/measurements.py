@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import Select, distinct, select
+from sqlalchemy import Select, case, distinct, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -163,6 +163,100 @@ class MeasurementRepository:
             len(records) - inserted_count,
         )
         return inserted_count
+
+    def quality_summary(self, *, metric: str) -> dict[str, int]:
+        """Return simple quality counters for one metric."""
+        filtered = (
+            select(
+                EnergyMeasurement.id.label("id"),
+                EnergyMeasurement.timestamp.label("timestamp"),
+                EnergyMeasurement.source.label("source"),
+                EnergyMeasurement.metric.label("metric"),
+                EnergyMeasurement.measurement_type.label("measurement_type"),
+                EnergyMeasurement.production_type.label("production_type"),
+                EnergyMeasurement.value.label("value"),
+                EnergyMeasurement.zone.label("zone"),
+            )
+            .where(EnergyMeasurement.metric == metric)
+            .subquery()
+        )
+
+        summary = self._db.execute(
+            select(
+                func.count().label("total_rows"),
+                func.sum(case((filtered.c.timestamp.is_(None), 1), else_=0)).label(
+                    "timestamp_null_count"
+                ),
+                func.sum(case((filtered.c.value.is_(None), 1), else_=0)).label(
+                    "value_null_count"
+                ),
+                func.sum(case((filtered.c.value < 0, 1), else_=0)).label(
+                    "value_negative_count"
+                ),
+                func.sum(
+                    case(
+                        (
+                            or_(
+                                filtered.c.source.is_(None),
+                                func.trim(filtered.c.source) == "",
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("source_null_count"),
+                func.sum(
+                    case(
+                        (
+                            or_(
+                                filtered.c.metric.is_(None),
+                                func.trim(filtered.c.metric) == "",
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("metric_null_count"),
+            )
+            .select_from(filtered)
+        ).mappings().one()
+
+        grouped_duplicates = (
+            select(
+                filtered.c.timestamp,
+                filtered.c.source,
+                filtered.c.metric,
+                filtered.c.measurement_type,
+                filtered.c.production_type,
+                filtered.c.zone,
+                func.count().label("row_count"),
+            )
+            .select_from(filtered)
+            .group_by(
+                filtered.c.timestamp,
+                filtered.c.source,
+                filtered.c.metric,
+                filtered.c.measurement_type,
+                filtered.c.production_type,
+                filtered.c.zone,
+            )
+            .subquery()
+        )
+        duplicate_rows = self._db.execute(
+            select(func.coalesce(func.sum(grouped_duplicates.c.row_count - 1), 0)).where(
+                grouped_duplicates.c.row_count > 1
+            )
+        ).scalar_one()
+
+        return {
+            "total_rows": int(summary["total_rows"] or 0),
+            "timestamp_null_count": int(summary["timestamp_null_count"] or 0),
+            "value_null_count": int(summary["value_null_count"] or 0),
+            "value_negative_count": int(summary["value_negative_count"] or 0),
+            "source_null_count": int(summary["source_null_count"] or 0),
+            "metric_null_count": int(summary["metric_null_count"] or 0),
+            "duplicate_count": int(duplicate_rows or 0),
+        }
 
     @staticmethod
     def _apply_filters(

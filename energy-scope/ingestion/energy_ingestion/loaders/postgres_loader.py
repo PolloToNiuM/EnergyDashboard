@@ -14,6 +14,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Engine
 
+from energy_ingestion.quality.checks import validate_measurements_dataframe
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BACKEND_ROOT = PROJECT_ROOT / "backend"
@@ -68,11 +70,13 @@ def insert_energy_measurements(
         logger.error("postgres_insert_failed reason=empty_dataframe")
         raise PostgresLoaderError("Refusing to insert an empty dataframe.")
 
+    validated_df = validate_measurements_dataframe(df)
+
     engine = engine or create_postgres_engine()
     if create_schema:
         init_postgres_schema(engine)
 
-    records = _prepare_energy_measurement_records(df)
+    records = _prepare_energy_measurement_records(validated_df)
     if not records:
         logger.info("postgres_insert_skipped reason=no_records")
         return 0

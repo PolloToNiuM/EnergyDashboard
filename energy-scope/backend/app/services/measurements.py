@@ -21,6 +21,7 @@ if str(INGESTION_ROOT) not in sys.path:
 
 from energy_ingestion.clients.rte_client import RTEClient
 from energy_ingestion.clients.weather_client import WeatherClient
+from energy_ingestion.quality.checks import validate_measurements_dataframe
 from energy_ingestion.transforms.actual_generation_transform import (
     ACTUAL_GENERATION_ENDPOINT,
     transform_actual_generation,
@@ -37,6 +38,11 @@ from energy_ingestion.transforms.weather_transform import (
 ACTUAL_GENERATION_METRIC = "actual_generation_per_production_type"
 CONSUMPTION_METRIC = "consumption_short_term"
 WEATHER_METRIC = "weather_hourly"
+QUALITY_DATASET_METRICS = {
+    "production": ACTUAL_GENERATION_METRIC,
+    "consumption": CONSUMPTION_METRIC,
+    "weather": WEATHER_METRIC,
+}
 DEFAULT_WEATHER_HOURLY_VARIABLES = (
     "temperature_2m",
     "shortwave_radiation",
@@ -191,7 +197,7 @@ class MeasurementService:
                 dataset="actual_generation",
             )
 
-        df = transform_actual_generation(response.json())
+        df = validate_measurements_dataframe(transform_actual_generation(response.json()))
         logger.info(
             "actual_generation_sync_transformed date=%s rows=%s raw_path=%s",
             target_date,
@@ -205,6 +211,73 @@ class MeasurementService:
             inserted_count,
         )
         return inserted_count
+
+    def data_quality_summary(self, dataset: str) -> dict:
+        """Return quality counters for a user-facing dataset."""
+        metric = QUALITY_DATASET_METRICS[dataset]
+        counters = self._repository.quality_summary(metric=metric)
+        checks = [
+            {
+                "name": "timestamp_not_null",
+                "label": "Timestamp non null",
+                "invalid_count": counters["timestamp_null_count"],
+            },
+            {
+                "name": "value_not_null",
+                "label": "Value non null",
+                "invalid_count": counters["value_null_count"],
+            },
+            {
+                "name": "value_positive",
+                "label": "Value >= 0",
+                "invalid_count": counters["value_negative_count"],
+            },
+            {
+                "name": "source_not_null",
+                "label": "Source non null",
+                "invalid_count": counters["source_null_count"],
+            },
+            {
+                "name": "metric_not_null",
+                "label": "Metric non null",
+                "invalid_count": counters["metric_null_count"],
+            },
+            {
+                "name": "no_duplicates",
+                "label": "Pas de doublons",
+                "invalid_count": counters["duplicate_count"],
+            },
+        ]
+        checks = [
+            {
+                **check,
+                "passed": check["invalid_count"] == 0,
+            }
+            for check in checks
+        ]
+        failed_checks = sum(check["invalid_count"] for check in checks)
+        total_rows = counters["total_rows"]
+        score = 100.0 if total_rows == 0 else max(
+            0.0,
+            100.0 - (failed_checks / total_rows * 100.0),
+        )
+        passed = all(check["passed"] for check in checks)
+        logger.info(
+            "data_quality_summary dataset=%s metric=%s rows=%s passed=%s score=%.2f",
+            dataset,
+            metric,
+            total_rows,
+            passed,
+            score,
+        )
+        return {
+            "dataset": dataset,
+            "metric": metric,
+            "total_rows": total_rows,
+            "passed": passed,
+            "score": round(score, 1),
+            "checks": checks,
+        }
 
     def sync_consumption_for_date(self, target_date: date) -> int:
         paris_tz = ZoneInfo("Europe/Paris")
@@ -227,7 +300,7 @@ class MeasurementService:
                 dataset="consumption",
             )
 
-        df = transform_consumption(response.json())
+        df = validate_measurements_dataframe(transform_consumption(response.json()))
         logger.info(
             "consumption_sync_transformed date=%s rows=%s raw_path=%s",
             target_date,
@@ -269,7 +342,9 @@ class MeasurementService:
                     transform_weather(response.json(), location_name=location.name)
                 )
 
-        average_df = average_weather_locations(location_dataframes, average_zone=average_zone)
+        average_df = validate_measurements_dataframe(
+            average_weather_locations(location_dataframes, average_zone=average_zone)
+        )
         inserted_count = self._repository.insert_measurements(average_df)
         logger.info(
             "weather_sync_inserted date=%s rows=%s inserted_count=%s zone=%s",

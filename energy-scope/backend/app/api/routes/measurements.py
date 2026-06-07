@@ -8,8 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.measurements import MeasurementRead, MeasurementSyncResult
-from app.services.measurements import MeasurementService
+from app.schemas.measurements import (
+    DataQualitySummaryRead,
+    MeasurementRead,
+    MeasurementSyncResult,
+)
+from app.services.measurements import MeasurementService, QUALITY_DATASET_METRICS
 
 
 router = APIRouter(prefix="/measurements", tags=["measurements"])
@@ -57,6 +61,27 @@ def list_measurements(
     )
     logger.info("list_measurements_finished count=%s", len(measurements))
     return measurements
+
+
+@router.get("/quality", response_model=DataQualitySummaryRead)
+def data_quality_summary(
+    db: Annotated[Session, Depends(get_db)],
+    dataset: Annotated[str, Query(pattern="^(production|consumption|weather)$")] = "production",
+) -> DataQualitySummaryRead:
+    """Return simple quality checks for one stored dataset."""
+    logger.info("data_quality_summary_started dataset=%s", dataset)
+    if dataset not in QUALITY_DATASET_METRICS:
+        raise HTTPException(status_code=400, detail="Unknown dataset.")
+
+    service = MeasurementService(db)
+    summary = service.data_quality_summary(dataset)
+    logger.info(
+        "data_quality_summary_finished dataset=%s passed=%s score=%s",
+        dataset,
+        summary["passed"],
+        summary["score"],
+    )
+    return summary
 
 
 @router.post("/sync/actual-generation", response_model=MeasurementSyncResult)
