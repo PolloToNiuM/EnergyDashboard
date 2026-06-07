@@ -4,6 +4,10 @@ EnergyScope est un projet de visualisation de données consacré au système él
 
 Ce dépôt est actuellement en phase de cadrage et de conception. Il documente la vision du produit, l’architecture cible et la feuille de route des premières versions.
 
+## Image d'avancement
+
+![Image d'un Energy Dashboard](./assets/ScreehShot_Dashboard.png)
+
 ## Objectifs
 
 EnergyScope a pour ambition de :
